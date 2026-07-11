@@ -1,0 +1,40 @@
+{
+  "name": "new-folder-(4)",
+  "version": "1.0.0",
+  "description": "",
+  "main": "router.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
+    "@upstash/redis": "^1.38.0",
+    "axios": "^1.13.4",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.8.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.7.4",
+    "multer": "^2.0.2",
+    "node-cache": "^5.1.2",
+    "nodemailer": "^6.10.1",
+    "oblien": "^2.0.2",
+    "pg": "^8.16.3",
+    "pusher": "^5.3.3",
+    "resend": "^6.12.3",
+    "sib-api-v3-sdk": "^8.5.0",
+    "socket.io": "^4.8.3",
+    "stream": "^0.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
