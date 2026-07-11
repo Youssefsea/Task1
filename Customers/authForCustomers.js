@@ -102,9 +102,9 @@ if (existingUser)
     const otp = crypto.randomInt(100000, 999999).toString();
     const hashedOtp = await bcryptJs.hash(otp, 10);
 
-    await redisClient.set(`otp:${email}`, hashedOtp, { ex: 60 });
+    await redisClient.set(`otp:${email}`, hashedOtp, { ex: 300 });
 
-    await redisClient.set(`otp_lock:${email}`, "1", { ex: 60 });
+    await redisClient.set(`otp_lock:${email}`, "1", { ex: 300 });
 
     await sendEmail(email, otp);
 
