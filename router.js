@@ -15,7 +15,6 @@ router.post('/LogforAdmin', auth.loginForAdmin);
 
 router.post('/send-otp', auth.sendOTPEmail);
 
-router.post('/signup', auth.signupForCustomer);
 router.post('/customer/signup', auth.signupForCustomer);
 router.post('/customer/login', auth.loginForCustomer);
 router.get('/customer/profile', middelware.sureToken,middelware.verifyRoleForCustomer, auth.getProfile);
