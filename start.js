@@ -24,5 +24,5 @@ app.use(cors({
 app.use('/', router);
 
 app.listen(3444, () => {
-  console.log("Server is running");
+  console.log("Server is running on http://localhost:3444");
 });
