@@ -1,14 +1,17 @@
-const data=require('../dataSchema/data');
+const mongoose = require('mongoose'); // ✅ كان ناقص وده بيكسر makeOrder
+const data = require('../dataSchema/data');
 const axios = require('axios');
+const { Readable } = require('stream'); // ✅ جديد: عشان نرفع صورة اثبات الدفع
+const cloudinary = require('../dataSchema/cloudTheImg'); // ✅ جديد: عشان نرفع صورة اثبات الدفع
 const { sendMail } = require('../dataSchema/mailService');
-const User=require('../dataSchema/user');
-const Cart=require('../dataSchema/Cart');
-const Dish=require('../dataSchema/Dish');
-const Order=require('../dataSchema/Order');
-const Wallet=require('../dataSchema/Wallet');
-const Payment=require('../dataSchema/PaymentSchema');
-const Restaurant=require('../dataSchema/Restaurant');
-const ChatRoom=require('../dataSchema/ChatRoom');
+const User = require('../dataSchema/user');
+const Cart = require('../dataSchema/Cart');
+const Dish = require('../dataSchema/Dish');
+const Order = require('../dataSchema/Order');
+const Wallet = require('../dataSchema/Wallet');
+const Payment = require('../dataSchema/PaymentSchema');
+const Restaurant = require('../dataSchema/Restaurant');
+const ChatRoom = require('../dataSchema/ChatRoom');
 
 const { bookingCustomerTemplate, bookingRestaurantTemplate } = require('../dataSchema/emailTemplates');
 
@@ -18,15 +21,15 @@ const sendBookingEmailsForOrder = async ({ orderId, customerId, restaurantId, re
       "items.dish",
       "name"
     );
-const customer = await User.findById(customerId).select("name email");
+    const customer = await User.findById(customerId).select("name email");
 
-  const restaurant = await Restaurant.findById(restaurantId)
+    const restaurant = await Restaurant.findById(restaurantId)
       .populate("owner", "name email");
 
     if (!order || !customer || !restaurant) {
       return;
     }
- const dishLines = order.items
+    const dishLines = order.items
       .map((item) => `- ${item.dish.name} x${item.quantity}`)
       .join("\n");
     const customerEmail = bookingCustomerTemplate({
@@ -144,7 +147,7 @@ const lookForResByName = async (req, res) => {
         match: {
           name: {
             $regex: name,
-            $options: "i", 
+            $options: "i",
           },
         },
         select: "name phone",
@@ -413,24 +416,24 @@ const deleteDishFromCart = async (req, res) => {
 const getCartDetails = async (req, res) => {
   try {
     const customerId = req.user.id;
- 
+
     const cart = await Cart.findOne({ user: customerId }).populate({
       path: 'items.dish',
       select: 'name description price image restaurant',
       populate: {
         path: 'restaurant',
-        select: 'location deliveryFees deliveryAreas isOpen owner',
+        select: 'location deliveryFees deliveryAreas isOpen openTime closeTime owner',
         populate: { path: 'owner', select: 'name' },
       },
     });
- 
+
     if (!cart) {
       return res.status(404).json({ error: "Cart not found" });
     }
- 
+
     console.log("Cart ID:", cart._id);
     console.log("Cart Items:", cart.items);
- 
+
     if (cart.items.length === 0) {
       console.log("Cart is empty");
       return res.status(200).json({
@@ -443,14 +446,14 @@ const getCartDetails = async (req, res) => {
         }
       });
     }
- 
+
     const detailedCartItems = cart.items
       .map(item => {
         const dish = item.dish;
         if (!dish || !dish.restaurant) return null;
- 
+
         const restaurant = dish.restaurant;
- 
+
         return {
           dishId: dish._id,
           quantity: item.quantity,
@@ -465,19 +468,19 @@ const getCartDetails = async (req, res) => {
           restaurantCanDeliver: restaurant.deliveryAreas[0]?.canDeliver,
           is_open: restaurant.isOpen,
           deliveryFee: restaurant.deliveryFees,
- 
+
           subtotal: dish.price * item.quantity
         };
       })
       .filter(Boolean);
- 
- 
- 
+
+
+
     const groupedByRestaurant = detailedCartItems.reduce((acc, item) => {
       let restaurant = acc.find(
         r => String(r.restaurantId) === String(item.restaurantId)
       );
- 
+
       if (!restaurant) {
         restaurant = {
           restaurantId: item.restaurantId,
@@ -490,12 +493,12 @@ const getCartDetails = async (req, res) => {
           totalItems: 0,
           totalPrice: 0
         };
- 
+
         acc.push(restaurant);
       }
- 
+
       restaurant.dishes.push({
- 
+
         dishId: item.dishId,
         image: item.image,
         quantity: item.quantity,
@@ -504,50 +507,50 @@ const getCartDetails = async (req, res) => {
         price: item.price,
         subtotal: item.subtotal
       });
- 
+
       restaurant.totalItems += item.quantity;
       restaurant.totalPrice += item.subtotal;
- 
+
       return acc;
     }, []);
- 
+
     for (let i = 0; i < groupedByRestaurant.length; i++) {
       const cartItem = cart.items.find(
         (ci) => ci.dish && ci.dish.restaurant && String(ci.dish.restaurant._id) === String(groupedByRestaurant[i].restaurantId)
       );
       const area = cartItem?.dish?.restaurant?.deliveryAreas?.[0];
       const points = area?.area?.coordinates?.[0] || [];
- 
+
       let restaurantLat = null, restaurantLng = null;
       if (points.length > 0) {
         let sumLat = 0, sumLng = 0;
- 
+
         points.forEach(p => {
           sumLng += p[0];
           sumLat += p[1];
         });
- 
+
         restaurantLng = sumLng / points.length;
         restaurantLat = sumLat / points.length;
       }
- 
+
       groupedByRestaurant[i] = {
         ...groupedByRestaurant[i],
         restaurantLat,
         restaurantLng
       };
     }
- 
+
     const grandTotal = groupedByRestaurant.reduce(
       (sum, r) => sum + r.totalPrice,
       0
     );
- 
+
     const totalItems = groupedByRestaurant.reduce(
       (sum, r) => sum + r.totalItems,
       0
     );
- 
+
     return res.status(200).json({
       cartItems: detailedCartItems,
       groupedByRestaurant,
@@ -557,7 +560,7 @@ const getCartDetails = async (req, res) => {
         grandTotal
       }
     });
- 
+
   } catch (err) {
     console.error("getCartDetails error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -599,113 +602,167 @@ const countAtCart = async (req, res) => {
 };
 
 
-
-
-
-
-
 const getDistanceInKm = ([lng1, lat1], [lng2, lat2]) => {
-  const R = 6371; 
+  const R = 6371;
   const toRad = (deg) => (deg * Math.PI) / 180;
- 
+
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
- 
+
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
- 
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
- 
+
+// ✅ لستة طرق الدفع اللي بتحتاج صورة اثبات - عدّلها لو الـ enum عندك مختلف
+const METHODS_REQUIRING_PROOF = ['vodafone_cash', 'instapay'];
+
 const makeOrder = async (req, res) => {
   const session = await mongoose.startSession();
- 
+
   try {
     session.startTransaction();
- 
+
     const customerId = req.user.id;
-    const { is_reservation, reservation_date, lat, lng, restaurantId } = req.body;
+    const {
+      is_reservation,
+      reservation_date,
+      lat,
+      lng,
+      restaurantId,
+      payment_method, // ✅ جديد
+    } = req.body;
+
+    const imgPay = req.files; // ✅ جديد: صورة اثبات الدفع (لو موجودة)
+
+    // ============================================================
+    // ✅ إصلاح المشكلة: لازم نتأكد ان صورة الدفع اترفعت بنجاح
+    // "قبل" ما نلمس الداتابيز خالص. لو الرفع فشل، منعملش أي أوردر.
+    // ============================================================
+    let imgPayUrl = null;
+
+    if (payment_method && METHODS_REQUIRING_PROOF.includes(payment_method)) {
+      if (!imgPay || imgPay.length === 0) {
+        await session.abortTransaction();
+        return res.status(400).json({ error: 'Payment proof image is required' });
+      }
+
+      const file = Array.isArray(imgPay) ? imgPay[0] : imgPay;
+
+      if (!file || !file.buffer) {
+        await session.abortTransaction();
+        return res.status(400).json({ error: 'Invalid payment proof image' });
+      }
+
+      try {
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'payimg' },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          Readable.from(file.buffer).pipe(stream);
+        });
+        imgPayUrl = uploadResult.secure_url;
+      } catch (uploadErr) {
+        // ✅ ده هو الفيكس الأساسي: لو الرفع فشل، الأوردر منعملهوش خالص
+        await session.abortTransaction();
+        console.error('Error uploading payment proof image:', uploadErr.message);
+        return res.status(400).json({
+          error: 'Failed to upload payment proof image. Order was not created.',
+        });
+      }
+    } else if (payment_method && payment_method !== 'cash' && !METHODS_REQUIRING_PROOF.includes(payment_method)) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        error: "Invalid payment method. Use 'cash', 'vodafone_cash' or 'instapay'",
+      });
+    }
+
     const location = await latLngToAddressOSM(lat, lng);
- 
+
     const cart = await Cart.findOne({ user: customerId })
       .populate({
         path: 'items.dish',
         populate: { path: 'restaurant' },
       })
       .session(session);
- 
+
     if (!cart) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'Cart not found' });
     }
- 
+
     let cartItems = cart.items.filter((item) => item.dish && item.dish.restaurant);
- 
+
     if (restaurantId) {
       cartItems = cartItems.filter(
         (item) => item.dish.restaurant._id.toString() === restaurantId.toString()
       );
     }
- 
+
     if (cartItems.length === 0) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'Cart is empty or no items from selected restaurant' });
     }
- 
+
     const groupOfResCartDishes = {};
     for (const item of cartItems) {
       const resId = item.dish.restaurant._id.toString();
       if (!groupOfResCartDishes[resId]) groupOfResCartDishes[resId] = [];
       groupOfResCartDishes[resId].push(item);
     }
- 
+
     if (is_reservation) {
       const canReserveExists = await Restaurant.exists({
         'deliveryAreas.canReserve': true,
       }).session(session);
- 
+
       if (!canReserveExists) {
         throw new Error('No restaurant available to receive reservations');
       }
     }
- 
+
     const createdOrders = [];
     const failedOrders = [];
     const orderedDishIds = [];
- 
+
     for (const resId of Object.keys(groupOfResCartDishes)) {
       try {
         const restaurant = await Restaurant.findById(resId).session(session);
- 
+
         if (!restaurant || !restaurant.isOpen) {
           failedOrders.push({ restaurantId: resId, reason: 'Restaurant is closed' });
           continue;
         }
- 
+
         if (!restaurant.deliveryAreas || restaurant.deliveryAreas.length === 0) {
           failedOrders.push({ restaurantId: resId, reason: 'Restaurant has no delivery areas defined' });
           continue;
         }
- 
+
         const points = restaurant.deliveryAreas[0].area?.coordinates?.[0] || [];
- 
+
         if (points.length === 0) {
           failedOrders.push({ restaurantId: resId, reason: 'Restaurant has invalid delivery area geometry' });
           continue;
         }
- 
+
         let sumLat = 0;
         let sumLng = 0;
         points.forEach(([pLng, pLat]) => {
           sumLng += pLng;
           sumLat += pLat;
         });
- 
+
         const lngOfRes = sumLng / points.length;
         const latOfRes = sumLat / points.length;
- 
+
         let totalAmount = 0;
         const orderItems = groupOfResCartDishes[resId].map((item) => {
           const price = item.dish.price;
@@ -716,10 +773,10 @@ const makeOrder = async (req, res) => {
             price,
           };
         });
- 
+
         const allowedRadius = restaurant.allowedRadiusKm;
         const distanceInKm = getDistanceInKm([lng, lat], [lngOfRes, latOfRes]);
- 
+
         if (distanceInKm > allowedRadius) {
           failedOrders.push({
             restaurantId: resId,
@@ -729,10 +786,10 @@ const makeOrder = async (req, res) => {
           });
           continue;
         }
- 
+
         const deliveryFee = parseFloat((restaurant.deliveryFees * distanceInKm).toFixed(2));
         totalAmount += deliveryFee;
- 
+
         const [order] = await Order.create(
           [
             {
@@ -755,9 +812,27 @@ const makeOrder = async (req, res) => {
           ],
           { session }
         );
- 
+
+        // ============================================================
+        // ✅ لو معانا صورة اثبات دفع، اعمل Payment مربوط بالأوردر ده
+        // جوه نفس الـ transaction (لو حصل فشل بعد كده، هيترجع الكل).
+        // ============================================================
+        if (imgPayUrl) {
+          const newPayment = new Payment({
+            order: order._id,
+            amount: totalAmount,
+            method: payment_method,
+            proofImage: imgPayUrl,
+            status: 'pending',
+          });
+          await newPayment.save({ session });
+
+          order.payment = newPayment._id;
+          await order.save({ session });
+        }
+
         orderItems.forEach((item) => orderedDishIds.push(item.dish));
- 
+
         createdOrders.push({
           orderId: order._id,
           restaurantId: resId,
@@ -765,7 +840,7 @@ const makeOrder = async (req, res) => {
           deliveryFee,
           customerLocation: { address: location, lat, lng },
         });
- 
+
         if (is_reservation && reservation_date) {
           await sendBookingEmailsForOrder({
             orderId: order._id,
@@ -779,7 +854,7 @@ const makeOrder = async (req, res) => {
         continue;
       }
     }
- 
+
     if (orderedDishIds.length > 0) {
       await Cart.updateOne(
         { _id: cart._id },
@@ -787,18 +862,19 @@ const makeOrder = async (req, res) => {
         { session }
       );
     }
- 
+
     if (createdOrders.length === 0) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'No orders created', failedOrders });
     }
- 
+
     await session.commitTransaction();
- 
+
     return res.status(201).json({
       message: 'Order processing completed',
       createdOrders,
       failedOrders,
+      paymentProof: imgPayUrl,
     });
   } catch (err) {
     await session.abortTransaction();
@@ -866,4 +942,4 @@ const getOrdersForCustomer = async (req, res) => {
 
 
 
-module.exports={getOrdersForCustomer,countAtCart,addDishToCart,deleteDishFromCart,getCartDetails,lookForNearRestaurants,restaurantsWhoCanResiveOrder,makeOrder,lookforAllRestaurants,lookForResByName,updateDishQuantityInCart};
+module.exports = { getOrdersForCustomer, countAtCart, addDishToCart, deleteDishFromCart, getCartDetails, lookForNearRestaurants, restaurantsWhoCanResiveOrder, makeOrder, lookforAllRestaurants, lookForResByName, updateDishQuantityInCart };

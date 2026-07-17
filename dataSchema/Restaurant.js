@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { geoPolygonSchema } =require ('./geo.js');
+const { geoPolygonSchema } = require('./geo.js');
 
 const { Schema, model } = mongoose;
 
@@ -25,7 +25,7 @@ const deliveryAreaSchema = new Schema(
       required: true,
     },
   },
-  { _id: true } 
+  { _id: true }
 );
 
 const restaurantSchema = new Schema(
@@ -33,14 +33,14 @@ const restaurantSchema = new Schema(
     owner: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true, 
+      required: true,
     },
     description: {
       type: String,
       default: null,
     },
     location: {
-      type: String, 
+      type: String,
       default: null,
       maxlength: 255,
     },
@@ -57,7 +57,7 @@ const restaurantSchema = new Schema(
       type: Boolean,
       default: true,
     },
-    
+
     openTime: {
       type: String,
       default: '09:00',
@@ -91,9 +91,15 @@ const restaurantSchema = new Schema(
 
 restaurantSchema.index({ owner: 1 }, { unique: true });
 restaurantSchema.index({ isDeleted: 1, isOpen: 1 });
-restaurantSchema.index({ 'deliveryAreas.area': '2dsphere' }); 
+restaurantSchema.index({ 'deliveryAreas.area': '2dsphere' });
+
 restaurantSchema.virtual('isCurrentlyOpen').get(function () {
   if (!this.isOpen) return false;
+
+  if (!this.openTime || !this.closeTime) {
+    return this.isOpen;
+  }
+
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const [openH, openM] = this.openTime.split(':').map(Number);

@@ -74,7 +74,6 @@ router.get('/customer/chat-rooms', middelware.sureToken, middelware.verifyRoleFo
 router.get('/customer/chat-room/order/:orderId', middelware.sureToken, middelware.verifyRoleForCustomer, chat.getChatRoomByOrderId);
 router.get('/customer/chat-messages/:roomId', middelware.sureToken, middelware.verifyRoleForCustomer, chat.getChatMessages);
 
-// Chat routes للمطعم
 router.get('/restaurant/chat-rooms', middelware.sureToken, middelware.verifyRoleForRestaurant, chat.getChatRoomsForRestaurant);
 router.get('/restaurant/chat-room/order/:orderId', middelware.sureToken, middelware.verifyRoleForRestaurant, chat.getChatRoomByOrderId);
 router.get('/restaurant/chat-messages/:roomId', middelware.sureToken, middelware.verifyRoleForRestaurant, chat.getChatMessages);

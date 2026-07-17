@@ -98,7 +98,7 @@ const getAllDishesForRestaurantVendor = async (req, res) => {
   }
 };
  
-const EXPLORE_FIELDS = 'restaurant name description price preparationTime category image -_id';
+const EXPLORE_FIELDS = 'restaurant name description price preparationTime category image _id isAvailable';
  
 const getAllDishesForRestaurantExplore = async (req, res) => {
   try {
@@ -116,12 +116,21 @@ const getAllDishesForRestaurantExplore = async (req, res) => {
       .sort({ restaurant: 1 })
       .select(EXPLORE_FIELDS);
  
-    const dishesByRestaurant = dishesRows.reduce((acc, dish) => {
-      const { restaurant, ...dishData } = dish.toObject();
-      if (!acc[restaurant]) acc[restaurant] = [];
-      acc[restaurant].push(dishData);
-      return acc;
-    }, {});
+const dishesByRestaurant = dishesRows.reduce((acc, dish) => {
+  const dishData = dish.toObject();
+
+  const restaurantId = dishData.restaurant.toString();
+
+  if (!acc[restaurantId]) {
+    acc[restaurantId] = [];
+  }
+
+  delete dishData.restaurant;
+
+  acc[restaurantId].push(dishData);
+
+  return acc;
+}, {});
  
     return res.status(200).json({ dishes: dishesByRestaurant });
   } catch (err) {

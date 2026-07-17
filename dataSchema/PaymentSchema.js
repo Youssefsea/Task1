@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const{ PAYMENT_METHODS, PAYMENT_STATUSES } =require('./enums.js');
+const { PAYMENT_METHODS, PAYMENT_STATUSES } = require('./enums.js');
 
 const { Schema, model } = mongoose;
 
@@ -9,7 +9,7 @@ const paymentSchema = new Schema(
     order: {
       type: Schema.Types.ObjectId,
       ref: 'Order',
-      required: true, 
+      required: true,
     },
     amount: {
       type: Schema.Types.Decimal128,
@@ -39,6 +39,7 @@ const paymentSchema = new Schema(
   }
 );
 
-paymentSchema.index({ order: 1 }, { unique: true }); 
-paymentSchema.index({ status: 1, createdAt: 1 }); 
-model.exports = model('Payment', paymentSchema);
+paymentSchema.index({ order: 1 }, { unique: true });
+paymentSchema.index({ status: 1, createdAt: 1 });
+
+module.exports = model('Payment', paymentSchema);
